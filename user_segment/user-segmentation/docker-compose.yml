@@ -1,0 +1,182 @@
+version: "3.9"
+
+x-common-env: &common-env
+  DB_HOST:      postgres
+  DB_PORT:      5432
+  DB_NAME:      segmentation_db
+  DB_USER:      admin
+  DB_PASSWORD:  secret
+  PYTHONPATH:   /app
+  LOG_LEVEL:    INFO
+  KMEANS_FINAL_K: 5
+  DBSCAN_EPS:     2.5
+  DBSCAN_MIN_SAMPLES: 10
+  LOOKBACK_DAYS: 30
+
+x-volumes: &shared-volumes
+  - ./data:/app/data
+  - ./models:/app/models
+  - ./logs:/app/logs
+  - ./reports:/app/reports
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: seg_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       segmentation_db
+      POSTGRES_USER:     admin
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d segmentation_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  data-generator:
+    build: .
+    container_name: seg_data_generator
+    environment:
+      <<: *common-env
+    volumes: *shared-volumes
+    command: python data/sample/generate_sample_data.py
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  pipeline:
+    build: .
+    container_name: seg_pipeline
+    environment:
+      <<: *common-env
+    volumes: *shared-volumes
+    command: >
+      python -m src.pipeline.batch_pipeline
+        --source csv
+        --plots-dir /app/reports/plots
+    depends_on:
+      data-generator:
+        condition: service_completed_successfully
+    profiles:
+      - pipeline
+
+  api:
+    build: .
+    container_name: seg_api
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      API_HOST:  0.0.0.0
+      API_PORT:  8000
+      API_DEBUG: "false"
+    volumes: *shared-volumes
+    ports:
+      - "8000:8000"
+    command: uvicorn api.app:app --host 0.0.0.0 --port 8000 --workers 2
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  dashboard:
+    build: .
+    container_name: seg_dashboard
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+    volumes: *shared-volumes
+    ports:
+      - "8501:8501"
+    command: >
+      streamlit run dashboard/app.py
+        --server.port 8501
+        --server.address 0.0.0.0
+        --server.headless true
+        --browser.gatherUsageStats false
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  airflow-init:
+    image: apache/airflow:2.9.1-python3.11
+    container_name: seg_airflow_init
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://admin:secret@postgres/segmentation_db
+      AIRFLOW__CORE__FERNET_KEY: ""
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      _AIRFLOW_DB_MIGRATE: "true"
+      _AIRFLOW_WWW_USER_CREATE: "true"
+      _AIRFLOW_WWW_USER_USERNAME: admin
+      _AIRFLOW_WWW_USER_PASSWORD: admin
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+    command: version
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - airflow
+
+  airflow-scheduler:
+    image: apache/airflow:2.9.1-python3.11
+    container_name: seg_airflow_scheduler
+    restart: unless-stopped
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://admin:secret@postgres/segmentation_db
+      AIRFLOW__CORE__FERNET_KEY: ""
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      PYTHONPATH: /app
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+      - ./:/app
+    command: scheduler
+    depends_on:
+      - postgres
+      - airflow-init
+    profiles:
+      - airflow
+
+  airflow-webserver:
+    image: apache/airflow:2.9.1-python3.11
+    container_name: seg_airflow_webserver
+    restart: unless-stopped
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://admin:secret@postgres/segmentation_db
+      AIRFLOW__CORE__FERNET_KEY: ""
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+    ports:
+      - "8080:8080"
+    command: webserver
+    depends_on:
+      - postgres
+      - airflow-init
+    profiles:
+      - airflow
+
+volumes:
+  postgres_data:
+  airflow_logs:

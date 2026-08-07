@@ -1,0 +1,49 @@
+name: moneylens
+description: Automatically analyze financial SMS and present spending insights.
+version: 1.0.0+1
+
+# pubspec.yaml — all deps: Riverpod, sqflite, telephony, permission_handler, uuid, crypto, google_fonts
+
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.4.9
+  riverpod_annotation: ^2.3.3
+
+  # Database
+  sqflite: ^2.3.0
+  path: ^1.9.0
+
+  # SMS Reading
+  telephony: ^0.2.0
+
+  # Permissions
+  permission_handler: ^11.3.0
+
+  # Utilities
+  uuid: ^4.3.3
+  intl: ^0.19.0
+  crypto: ^3.0.3
+
+  # UI
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.9
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  build_runner: ^2.4.8
+  riverpod_generator: ^2.3.9
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/

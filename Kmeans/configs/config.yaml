@@ -1,0 +1,59 @@
+# Central project configuration.
+# Keep all tunable business and ML parameters here so that code changes are not
+# required when the business wants to modify the activity window, K search range,
+# DBSCAN sensitivity, or deployment artifact paths.
+
+paths:
+  raw_data_dir: data/raw
+  processed_data_dir: data/processed
+  model_dir: models
+  report_dir: reports
+
+data:
+  users: users.csv
+  sessions: sessions.csv
+  ad_events: ad_events.csv
+  wallet: wallet.csv
+  transactions: transactions.csv
+  location: location.csv
+  device: device.csv
+
+features:
+  activity_window_days: 30
+  outlier_iqr_multiplier: 3.0
+  # Numeric feature set used by K-Means and DBSCAN.
+  # These are intentionally behavior and monetization focused because clustering
+  # should describe how users act, not only where they live or which phone they use.
+  clustering_columns:
+    - user_age_days
+    - session_count
+    - avg_session_duration
+    - total_session_duration
+    - active_days
+    - recency_days
+    - pages_per_session
+    - total_impressions
+    - total_clicks
+    - ctr
+    - total_earnings
+    - total_redeemed
+    - wallet_balance
+    - redemption_rate
+    - total_transactions
+    - total_txn_amount
+    - avg_txn_amount
+    - txn_success_rate
+    - engagement_score
+    - monetization_score
+    - churn_risk_score
+
+model:
+  random_state: 42
+  kmeans:
+    min_k: 2
+    max_k: 8
+    n_init: 20
+  dbscan:
+    min_samples: 8
+    eps_values: [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0]
+

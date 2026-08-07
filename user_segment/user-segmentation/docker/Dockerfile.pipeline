@@ -1,0 +1,28 @@
+FROM python:3.11-slim
+
+LABEL description="User Segmentation - ML Pipeline"
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY src/ ./src/
+COPY pipelines/ ./pipelines/
+COPY scripts/ ./scripts/
+COPY config/ ./config/
+COPY data/ ./data/
+
+# Ensure data dirs exist
+RUN mkdir -p data/raw data/processed data/models
+
+RUN adduser --disabled-password --gecos "" pipelineuser && \
+    chown -R pipelineuser:pipelineuser /app
+USER pipelineuser
+
+CMD ["python", "pipelines/weekly_pipeline.py"]

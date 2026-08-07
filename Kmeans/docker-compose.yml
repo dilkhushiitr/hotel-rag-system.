@@ -1,0 +1,13 @@
+services:
+  segmentation-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      SEGMENTATION_CONFIG: configs/config.yaml
+      SEGMENTATION_ARTIFACT: models/segmentation_artifacts.joblib
+    volumes:
+      - ./models:/app/models
+      - ./reports:/app/reports
+      - ./data:/app/data
+

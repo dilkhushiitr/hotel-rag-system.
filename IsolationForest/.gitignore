@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+data/raw/*.csv
+data/processed/*.csv
+models/*.joblib
+logs/*.json
+logs/*.log
+mlruns/
+.dvc/
+

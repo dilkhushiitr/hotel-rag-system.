@@ -1,0 +1,12 @@
+services:
+  fraud-api:
+    build: .
+    container_name: isolation-forest-fraud-api
+    ports:
+      - "8000:8000"
+    environment:
+      - FRAUD_CONFIG_PATH=/app/configs/config.yaml
+    volumes:
+      - ./models:/app/models
+      - ./logs:/app/logs
+

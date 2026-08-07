@@ -1,0 +1,49 @@
+paths:
+  raw_data_dir: data/raw
+  processed_data_dir: data/processed
+  model_dir: models
+  logs_dir: logs
+  users: data/raw/users.csv
+  transactions: data/raw/transactions.csv
+  devices: data/raw/devices.csv
+  network: data/raw/network.csv
+  behavioral: data/raw/behavioral.csv
+  model_artifact: models/fraud_iforest_pipeline.joblib
+
+model:
+  random_state: 42
+  contamination: 0.06
+  n_estimators: 200
+  max_samples: 256
+  max_features: 1.0
+
+scoring:
+  rule_weight: 0.5
+  ml_weight: 0.5
+  low_threshold: 25
+  high_threshold: 45
+
+rules:
+  emulator_flag: 30
+  vpn_flag: 25
+  high_velocity_1h: 25
+  proxy_flag: 20
+  geo_mismatch: 20
+  high_deviation: 20
+  device_sharing: 20
+  rooted_flag: 15
+  high_velocity_24h: 15
+  ip_sharing: 15
+  high_failure_rate: 15
+  unverified_kyc: 10
+  new_account: 10
+
+thresholds:
+  new_account_days: 7
+  accounts_per_device: 3
+  accounts_per_ip: 5
+  high_velocity_1h: 5
+  high_velocity_24h: 20
+  high_failure_rate: 0.50
+  amount_deviation_multiplier: 3.0
+
